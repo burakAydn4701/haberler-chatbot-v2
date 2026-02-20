@@ -1,0 +1,10 @@
+pyodbc
+numpy
+re
+html
+sentence_transformers
+tqdm
+requests
+fastapi 
+pydantic
+psutil
