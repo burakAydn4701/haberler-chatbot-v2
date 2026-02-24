@@ -3,45 +3,40 @@ from sentence_transformers import SentenceTransformer
 from config import EMBED_MODEL, EMB_TABLE
 from db import get_connection
 
-def cosine_similarity(a, b):
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
-def search(question, emb_model, top_k=5):
-    model = emb_model
-
-    query_vector = model.encode(f"query: {question}")
-    query_vector = np.array(query_vector, dtype=np.float32)
-
+# Load embeddings once
+def load_embeddings():
     conn = get_connection()
     cursor = conn.cursor()
-
-    cursor.execute(f"""
-                    select haber_id, chunk_text, embedding
-                    from {EMB_TABLE} with(nolock)
-        """)
-    
+    cursor.execute(f"SELECT haber_id, chunk_text, embedding FROM {EMB_TABLE} WITH (NOLOCK)")
     rows = cursor.fetchall()
 
-    scored = []
+    # Convert embeddings to numpy array in memory
+    ids = []
+    texts = []
+    vectors = []
 
     for row in rows:
-        haber_id = row[0]
-        chunk_text = row[1]
-        emb_vector = np.frombuffer(row[2], dtype=np.float32)
+        ids.append(row[0])
+        texts.append(row[1])
+        vectors.append(np.frombuffer(row[2], dtype=np.float32))
 
-        score = cosine_similarity(query_vector, emb_vector)
-        scored.append((score, haber_id, chunk_text))
+    vectors = np.stack(vectors)
+    return ids, texts, vectors
 
+# Preload at startup
+IDS, TEXTS, VECTORS = load_embeddings()
 
-    scored.sort(reverse=True, key=lambda x: x[0])
+def search(question, emb_model, top_k=5):
+    query_vector = emb_model.encode(f"query: {question}", normalize_embeddings=True)
+    query_vector = np.array(query_vector, dtype=np.float32)
 
-    return scored[:top_k]
+    # Cosine similarity = dot product since vectors are normalized
+    scores = VECTORS @ query_vector
 
-if __name__ == "__main__":
-    question = input("Soru: ")
-    results = search(question)
+    # Get top K
+    top_idx = np.argpartition(-scores, top_k)[:top_k]
+    top_results = [(scores[i], IDS[i], TEXTS[i]) for i in top_idx]
 
-    for score, haber_id, chunk in results:
-        print(score, haber_id)
-        print(chunk[:300])
-        print("-" * 40)
+    # Sort top K
+    top_results.sort(reverse=True, key=lambda x: x[0])
+    return top_results

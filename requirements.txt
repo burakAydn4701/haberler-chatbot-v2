@@ -5,3 +5,4 @@ requests
 fastapi 
 pydantic
 psutil
+bs4

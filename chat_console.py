@@ -19,9 +19,7 @@ def main():
 
         print("Available RAM (GB):", psutil.virtual_memory().available / 1024**3)
         answer = ask_ollama(prompt)
-
-        print("\n" + answer)
-
+        print()
 
 if __name__ == "__main__":
     main()

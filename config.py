@@ -5,8 +5,7 @@ SQL_CONFIG = {
     "server": "medyadb.haberler.com",
     "database": "medya",
     "username": "burak.aydin",
-    "password": "nolock2026",
-    "driver": "ODBC Driver 17 for SQL Server"
+    "password": "nolock2026"
 }
 
 EMBED_MODEL = "intfloat/multilingual-e5-base"
